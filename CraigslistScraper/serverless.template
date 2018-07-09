@@ -8,7 +8,7 @@
     "Get" : {
       "Type" : "AWS::Serverless::Function",
       "Properties": {
-        "Handler": "CraigslistScraper::CraigslistScraper.Functions::Get",
+        "Handler": "CraigslistScraper::CraigslistScraper.Function::AddListing",
         "Runtime": "dotnetcore2.0",
         "CodeUri": "",
         "MemorySize": 256,

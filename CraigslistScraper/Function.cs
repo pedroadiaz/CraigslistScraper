@@ -19,7 +19,7 @@ using Newtonsoft.Json;
 
 namespace CraigslistScraper
 {
-    public class Functions
+    public class Function
     {
         public const string CITY_NAME = "city";
         public IDynamoDBContext DBContext { get; set; }
@@ -31,7 +31,7 @@ namespace CraigslistScraper
         /// <summary>
         /// Default constructor that Lambda will invoke.
         /// </summary>
-        public Functions()
+        public Function()
         {
             string tableName = "CraigslistJobs";
             AWSConfigsDynamoDB.Context.TypeMappings[typeof(Listing)] = new Amazon.Util.TypeMapping(typeof(Listing), tableName);
@@ -62,32 +62,40 @@ namespace CraigslistScraper
         public async Task<APIGatewayProxyResponse> AddListing(APIGatewayProxyRequest request, ILambdaContext context)
         {
             string cityName = null;
-            if (request.PathParameters != null && request.PathParameters.ContainsKey(CITY_NAME))
+            APIGatewayProxyResponse response = new APIGatewayProxyResponse();
+            try
             {
-                cityName = request.PathParameters[CITY_NAME];
+                if (request.PathParameters != null && request.PathParameters.ContainsKey(CITY_NAME))
+                {
+                    cityName = request.PathParameters[CITY_NAME];
+                }
+                else
+                {
+                    cityName = "losangeles";
+                }
+
+                string content = GetData(cityName, this.GigURL);
+                List<Listing> listings = ParseHTML(content, cityName);
+
+                string jobContent = GetData(cityName, this.JobURL);
+                listings.AddRange(ParseHTML(jobContent, cityName));
+
+                foreach (Listing listing in listings)
+                {
+                    await DBContext.SaveAsync<Listing>(listing);
+                }
+
+                response.StatusCode = (int)HttpStatusCode.OK;
+                response.Body = string.Format("{0} listings saved in {1}", listings.Count, "LosAngeles");
+                response.Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } };
             }
-            else
+            catch (Exception e)
             {
-                cityName = "losangeles";
+                response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                response.Body = string.Format("0 listings saved. Error: {0}\r\n{1}", e.Message, e.StackTrace);
+                response.Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } };
             }
 
-            string content = GetData(cityName, this.GigURL);
-            List<Listing> listings = ParseHTML(content, cityName);
-
-            string jobContent = GetData(cityName, this.JobURL);
-            listings.AddRange(ParseHTML(jobContent, cityName));
-
-            foreach (Listing listing in listings)
-            {
-                await DBContext.SaveAsync<Listing>(listing);
-            }
-
-            var response = new APIGatewayProxyResponse
-            {
-                StatusCode = (int)HttpStatusCode.OK,
-                Body = string.Format("{0} listings saved in {1}", listings.Count, "LosAngeles"),
-                Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } }
-            };
             return response;
         }
 
@@ -97,7 +105,7 @@ namespace CraigslistScraper
             string regexDate = @"<time class=""result-date"" datetime=""(\d{4}-\d{2}-\d{2} \d{2}:\d{2})""[^>]*?>";
             List<Listing> listings = new List<Listing>();
 
-            if (content.Contains("<li class=\"result - row\""))
+            if (content.Contains("<li class=\"result-row\""))
             {
                 MatchCollection dateMatches = Regex.Matches(content, regexDate);
                 MatchCollection anchorMatches = Regex.Matches(content, regexAnchor);
