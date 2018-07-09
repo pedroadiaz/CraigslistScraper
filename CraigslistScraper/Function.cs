@@ -22,7 +22,7 @@ namespace CraigslistScraper
     public class Function
     {
         public const string CITY_NAME = "city";
-        public IDynamoDBContext DBContext { get; set; }
+        IDynamoDBContext DBContext { get; set; }
 
         private string GigURL = "https://{0}.craigslist.org/search/cpg?is_paid=yes&postedToday=1";
 
