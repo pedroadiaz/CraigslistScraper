@@ -97,7 +97,7 @@ namespace CraigslistScraper
                 listings.AddRange(ParseHTML(jobContent, cityName));
 
                 foreach (Listing listing in listings)
-                {
+                {     
                     await DBContext.SaveAsync<Listing>(listing);
                 }
 
@@ -117,7 +117,7 @@ namespace CraigslistScraper
 
         private List<Listing> ParseHTML(string content, string cityName)
         {
-            string regexAnchor = @"<a href=""([\w\:\.\-\/]+\d+\.html)""[^>]*?>(.+)(?=</a>)";
+            string regexAnchor = @"<a href=""([\w\:\.\-\/]+\d+\.html)"" data\-id=""(\d+)""[^>]*?>(.+)(?=</a>)";
             string regexDate = @"<time class=""result-date"" datetime=""(\d{4}-\d{2}-\d{2} \d{2}:\d{2})""[^>]*?>";
             List<Listing> listings = new List<Listing>();
 
@@ -137,8 +137,9 @@ namespace CraigslistScraper
                             if (!group.Value.StartsWith("<time"))
                             {
                                 Listing listing = new Listing();
+                                listing.ID = anchorMatches[i].Groups[groupIndex + 1].Value;
                                 listing.ListingDate = group.Value;
-                                listing.Title = anchorMatches[i].Groups[groupIndex + 1].Value;
+                                listing.Title = anchorMatches[i].Groups[groupIndex + 2].Value;
                                 listing.Link = anchorMatches[i].Groups[groupIndex].Value;
                                 listing.City = cityName;
                                 listings.Add(listing);
