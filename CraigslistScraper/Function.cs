@@ -65,13 +65,29 @@ namespace CraigslistScraper
             APIGatewayProxyResponse response = new APIGatewayProxyResponse();
             try
             {
-                if (request.PathParameters != null && request.PathParameters.ContainsKey(CITY_NAME))
+                if (request.QueryStringParameters != null && request.QueryStringParameters.ContainsKey(CITY_NAME))
                 {
-                    cityName = request.PathParameters[CITY_NAME];
+                    cityName = request.QueryStringParameters[CITY_NAME];
                 }
                 else
                 {
                     cityName = "losangeles";
+                    if (request.QueryStringParameters != null)
+                    {
+                        Console.WriteLine("Querystring parameters");
+                        foreach (string something in request.QueryStringParameters.Keys)
+                        {
+                            Console.WriteLine(something);
+                        }
+                    }
+                    if (request.PathParameters != null)
+                    {
+                        Console.WriteLine("Path parameters");
+                        foreach (string something in request.PathParameters.Keys)
+                        {
+                            Console.WriteLine(something);
+                        }
+                    }
                 }
 
                 string content = GetData(cityName, this.GigURL);
@@ -86,7 +102,7 @@ namespace CraigslistScraper
                 }
 
                 response.StatusCode = (int)HttpStatusCode.OK;
-                response.Body = string.Format("{0} listings saved in {1}", listings.Count, "LosAngeles");
+                response.Body = string.Format("{0} listings saved in {1}", listings.Count, cityName);
                 response.Headers = new Dictionary<string, string> { { "Content-Type", "text/plain" } };
             }
             catch (Exception e)
